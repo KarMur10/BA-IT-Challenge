@@ -1,0 +1,62 @@
+﻿@page "/CatalogEdit"
+@attribute [Authorize(Policy = "RequireManagerRole")]
+@inject Microsoft.EntityFrameworkCore.IDbContextFactory<ApplicationDbContext> _context;
+@using BA_IT_Challenge.Data
+@using BA_IT_Challenge.Models
+
+<PageTitle>Edit the Catalog</PageTitle>
+
+<h1>Edit the Catalog</h1>
+
+@foreach (var book in UnavailableBooks)
+{
+    <div class="list-group-item mt-1">
+        <h5 class="mb-1">@book.Title By @book.Author</h5>
+        <h5 class="mb-1">Genre: @book.Genre</h5>
+        <p class="mb-1">
+            Publisher: @book.Publisher, Publish date: @book.PublishDate <br />
+            @book.ISBN
+        </p>
+        <h5>@book.Status</h5>
+        @if(book.Status == "Borrowed")
+        {
+            <button class="btn btn-primary" @onclick="@(() => OnReturnedPress(book.Id))">Book Returned</button>
+        }
+        else if(book.Status == "Reserved")
+        {
+            <button class="btn btn-primary" @onclick="@(() => OnReturnedPress(book.Id))">Reservation Cancelled</button>
+        }
+    </div>
+}
+
+@code {
+    List<Book> UnavailableBooks = new();
+
+    protected override Task OnInitializedAsync()
+    {
+        GetAllUnavailableBooks();
+        return base.OnInitializedAsync();
+    }
+
+    public void GetAllUnavailableBooks()
+    {
+        var context = _context.CreateDbContext();
+        var unavailableBooks = context.Books.Where(x => x.Status != "Available")
+                                            .Select(x => x)
+                                            .ToList();
+        UnavailableBooks = unavailableBooks;
+        StateHasChanged();
+    }
+    
+    public void OnReturnedPress(int bookId)
+    {
+        var context = _context.CreateDbContext();
+        var book = context.Books.SingleOrDefault(x => x.Id == bookId);
+        if (book != null)
+        {
+            book.Status = "Available";
+            context.SaveChanges();
+            GetAllUnavailableBooks();
+        }
+    }
+}

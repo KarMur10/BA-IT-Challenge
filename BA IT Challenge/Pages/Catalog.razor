@@ -1,0 +1,168 @@
+﻿@page "/Catalog"
+@inject Microsoft.EntityFrameworkCore.IDbContextFactory<ApplicationDbContext> _context;
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor
+@inject Microsoft.AspNetCore.Identity.UserManager<IdentityUser> _userManager;
+@using BA_IT_Challenge.Data
+@using BA_IT_Challenge.Models
+@using Microsoft.AspNetCore.Identity;
+
+<PageTitle>Catalog</PageTitle>
+
+<h1>Catalog</h1>
+
+<p>Search filters are case sensitive.</p>
+
+<div class="row mt-1">
+    <div class="col">
+        <input id="bookTitle" placeholder="Book Title" @bind="title" />
+    </div>
+    <div class="col">
+        <input id="bookAuthor" placeholder="Book Author" @bind="author" />
+    </div>
+    <div class="col">
+        <input id="bookPublisher" placeholder="Book Publisher" @bind="publisher" />
+    </div>
+</div>
+<div class="row mt-1">
+    <div class="col">
+        <input id="bookPublishDate" placeholder="Book Publish Date" @bind="publishDate" />
+    </div>
+    <div class="col">
+        <input id="bookGenre" placeholder="Book Genre" @bind="genre" />
+    </div>
+    <div class="col">
+        <input id="bookISBN" placeholder="Book ISBN" @bind="isbn" />
+    </div>
+</div>
+<label for="bookStatus">Show only Available</label>
+<input type="checkbox" id="bookStatus" @bind="showAvailableOnly"/>
+<br />
+<button type="submit" class="btn btn-primary" @onclick="(() => OnSearchPress())">Search</button>
+<div class="list-group mt-2">
+    @foreach (var book in AllBooks)
+    {
+        <div class="list-group-item mt-1">
+            <h5 class="mb-1">@book.Title By @book.Author</h5>
+            <h5 class="mb-1">Genre: @book.Genre</h5>
+            <p class="mb-1">
+                Publisher: @book.Publisher, Publish date: @book.PublishDate <br />
+                @book.ISBN
+            </p>
+            @if (book.Status == "Available")
+            {
+                <h5 class="text-success">@book.Status</h5>
+                <AuthorizeView>
+                    <Authorized>
+                        <button class="btn btn-primary" @onclick="@(() => OnBorrowPress(book.Id))">Borrow</button>
+                        <button class="btn btn-secondary" @onclick="@(() => OnReservePress(book.Id))">Reserve</button>
+                    </Authorized>
+                    <NotAuthorized>
+                        <p>To borrow or reserve a book you must be logged in.</p>
+                    </NotAuthorized>
+                </AuthorizeView>
+            }
+            else
+            {
+                <h5 class="text-danger">@book.Status</h5>
+            }
+        </div>
+    }
+</div>
+
+
+@code {
+    string? title;
+    string? author;
+    string? publisher;
+    string? publishDate;
+    string? genre;
+    string? isbn;
+    bool showAvailableOnly = false;
+    List<Book> AllBooks = new();
+
+    protected override Task OnInitializedAsync()
+    {
+        GetAllBooks();
+        return base.OnInitializedAsync();
+    }
+
+    public void GetAllBooks()
+    {
+        var context = _context.CreateDbContext();
+        var allBooks = context.Books.Select(x => x)
+                                    .ToList();
+        AllBooks = allBooks;
+        StateHasChanged();
+    }
+
+    public async void OnBorrowPress(int bookId)
+    {
+        var context = _context.CreateDbContext();
+        var book = context.Books.SingleOrDefault(x => x.Id == bookId);
+        if(book != null)
+        {
+            book.Status = "Borrowed";
+            var user = _httpContextAccessor.HttpContext?.User;
+            var identityUser = await _userManager.GetUserAsync(user);
+            book.LenderOrReserverId = identityUser.Id;
+            context.SaveChanges();
+            GetAllBooks();
+        }
+    }
+
+    public async void OnReservePress(int bookId)
+    {
+        var context = _context.CreateDbContext();
+        var book = context.Books.SingleOrDefault(x => x.Id == bookId);
+        if (book != null)
+        {
+            book.Status = "Reserved";
+            var user = _httpContextAccessor.HttpContext?.User;
+            var identityUser = await _userManager.GetUserAsync(user);
+            book.LenderOrReserverId = identityUser.Id;
+            context.SaveChanges();
+            GetAllBooks();
+        }
+    }
+
+    public void OnSearchPress()
+    {
+        GetAllBooks();
+        if(!String.IsNullOrEmpty(title))
+        {
+            AllBooks = AllBooks.Where(x => x.Title.Contains(title))
+                               .ToList();
+        }
+        if (!String.IsNullOrEmpty(author))
+        {
+            AllBooks = AllBooks.Where(x => x.Author.Contains(author))
+                               .ToList();
+        }
+        if (!String.IsNullOrEmpty(publisher))
+        {
+            AllBooks = AllBooks.Where(x => (x.Publisher ?? "").Contains(publisher))
+                               .ToList();
+        }
+        if (!String.IsNullOrEmpty(publishDate))
+        {
+            AllBooks = AllBooks.Where(x => (x.PublishDate ?? "").Contains(publishDate))
+                               .ToList();
+        }
+        if (!String.IsNullOrEmpty(genre))
+        {
+            AllBooks = AllBooks.Where(x => (x.Genre ?? "").Contains(genre))
+                               .ToList();
+        }
+        if (!String.IsNullOrEmpty(isbn))
+        {
+            AllBooks = AllBooks.Where(x => x.ISBN.Contains(isbn))
+                               .ToList();
+        }
+        if(showAvailableOnly)
+        {
+            AllBooks = AllBooks.Where(x => x.Status == "Available")
+                               .ToList();
+        }
+        StateHasChanged();
+    }
+}
