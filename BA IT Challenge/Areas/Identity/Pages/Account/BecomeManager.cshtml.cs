@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Security.Claims;
 
 namespace BA_IT_Challenge.Areas.Identity.Pages.Account
 {
@@ -28,6 +29,7 @@ namespace BA_IT_Challenge.Areas.Identity.Pages.Account
             var identityUser = await _userManager.GetUserAsync(user);
 
             await _userManager.AddToRoleAsync(identityUser, "Manager");
+            await _userManager.AddClaimAsync(identityUser, new Claim(ClaimTypes.Role, "Manager"));
         }
     }
 }
