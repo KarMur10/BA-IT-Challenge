@@ -8,6 +8,10 @@
 
 <h1>Edit the Catalog</h1>
 
+@if(UnavailableBooks.Count == 0)
+{
+    <p>No books are borrowed or reserved</p>
+}
 @foreach (var book in UnavailableBooks)
 {
     <div class="list-group-item mt-1">
@@ -18,11 +22,11 @@
             @book.ISBN
         </p>
         <h5>@book.Status</h5>
-        @if(book.Status == "Borrowed")
+        @if(book.Status == StatusValue[2])
         {
             <button class="btn btn-primary" @onclick="@(() => OnReturnedPress(book.Id))">Book Returned</button>
         }
-        else if(book.Status == "Reserved")
+        else if(book.Status == StatusValue[3])
         {
             <button class="btn btn-primary" @onclick="@(() => OnReturnedPress(book.Id))">Reservation Cancelled</button>
         }
@@ -31,6 +35,13 @@
 
 @code {
     List<Book> UnavailableBooks = new();
+
+    readonly Dictionary<int, string> StatusValue = new()
+    {
+        {1, "Available"},
+        {2, "Borrowed"},
+        {3, "Reserved"}
+    };
 
     protected override Task OnInitializedAsync()
     {
@@ -41,7 +52,7 @@
     public void GetAllUnavailableBooks()
     {
         var context = _context.CreateDbContext();
-        var unavailableBooks = context.Books.Where(x => x.Status != "Available")
+        var unavailableBooks = context.Books.Where(x => x.Status != StatusValue[1])
                                             .Select(x => x)
                                             .ToList();
         UnavailableBooks = unavailableBooks;
@@ -54,7 +65,7 @@
         var book = context.Books.SingleOrDefault(x => x.Id == bookId);
         if (book != null)
         {
-            book.Status = "Available";
+            book.Status = StatusValue[1];
             context.SaveChanges();
             GetAllUnavailableBooks();
         }
