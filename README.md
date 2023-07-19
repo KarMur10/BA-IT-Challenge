@@ -14,7 +14,7 @@ As a manager you can see a list of all reserved or borrowed books and change the
 
 Change configuration options to use selected sql database.
 
-### Acomplished using
+### Accomplished using
 
 - Identity Server 
 - Entity Framework
